@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
-import { getAnalytics } from "@/lib/analytics";
-import { salaryRecords } from "@/lib/data";
+import { getAnalyticsDashboard } from "@/lib/analytics-service";
 
 export async function GET() {
-    return NextResponse.json({ summary: getAnalytics(salaryRecords) });
+    try {
+        return NextResponse.json(await getAnalyticsDashboard());
+    } catch {
+        return NextResponse.json({ error: "Unable to load analytics" }, { status: 500 });
+    }
 }
