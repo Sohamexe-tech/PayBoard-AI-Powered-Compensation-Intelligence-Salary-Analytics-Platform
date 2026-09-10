@@ -38,6 +38,7 @@ export interface PaginationMeta {
 }
 
 export interface CompanySummary {
+    id?: string;
     name: string;
     normalizedName: string;
     recordCount: number;

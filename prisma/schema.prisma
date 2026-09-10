@@ -41,16 +41,28 @@ model Role {
   @@index([normalizedTitle])
 }
 
+model NormalizedLevel {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  levels      Level[]
+
+  @@index([name])
+}
+
 model Level {
   id              String        @id @default(cuid())
   name            String
   normalizedName  String        @unique
   rank            Int
+  normalizedLevelId String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   compensations   Compensation[]
+  normalizedLevel NormalizedLevel? @relation(fields: [normalizedLevelId], references: [id], onDelete: SetNull)
 
   @@index([rank])
+  @@index([normalizedLevelId])
 }
 
 model Location {

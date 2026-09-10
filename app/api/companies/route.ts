@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { getCompanySummaries } from "@/lib/analytics";
-import { salaryRecords } from "@/lib/data";
+import { findCompanies } from "@/lib/company-repository";
 
-export async function GET() {
-    return NextResponse.json({ companies: getCompanySummaries(salaryRecords) });
+export async function GET(request: Request) {
+    const search = new URL(request.url).searchParams.get("search") ?? undefined;
+    try {
+        return NextResponse.json({ companies: await findCompanies(search) });
+    } catch {
+        return NextResponse.json({ error: "Unable to load companies" }, { status: 500 });
+    }
 }
