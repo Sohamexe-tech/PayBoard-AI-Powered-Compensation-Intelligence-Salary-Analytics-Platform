@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CompensationSource {
+  public
+  internal
+  partner
+  estimated
+}
+
+model Company {
+  id             String        @id @default(cuid())
+  name           String        @unique
+  normalizedName String        @unique
+  industry       String?
+  website        String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  compensations  Compensation[]
+
+  @@index([normalizedName])
+}
+
+model Role {
+  id              String        @id @default(cuid())
+  title           String
+  normalizedTitle String
+  department      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  compensations   Compensation[]
+
+  @@unique([title, normalizedTitle])
+  @@index([normalizedTitle])
+}
+
+model Level {
+  id              String        @id @default(cuid())
+  name            String
+  normalizedName  String        @unique
+  rank            Int
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  compensations   Compensation[]
+
+  @@index([rank])
+}
+
+model Location {
+  id          String        @id @default(cuid())
+  city        String
+  state       String?
+  country     String
+  currency    String        @default("USD")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  compensations Compensation[]
+
+  @@unique([city, state, country, currency])
+  @@index([country, state, city])
+}
+
+model Compensation {
+  id                  String             @id @default(cuid())
+  companyId           String
+  roleId              String
+  levelId             String
+  locationId          String
+  baseSalary          Decimal            @db.Decimal(18, 2)
+  bonus               Decimal            @db.Decimal(18, 2) @default(0)
+  stock               Decimal            @db.Decimal(18, 2) @default(0)
+  totalCompensation   Decimal            @db.Decimal(18, 2)
+  yearsExperience     Int
+  currency            String             @default("USD")
+  source              CompensationSource @default(public)
+  fingerprint         String             @unique
+  submittedAt         DateTime           @default(now())
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role      Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  level     Level   @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, roleId, levelId, locationId])
+  @@index([fingerprint])
+}
