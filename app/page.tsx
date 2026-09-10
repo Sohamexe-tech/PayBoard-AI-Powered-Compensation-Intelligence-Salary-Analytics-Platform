@@ -26,10 +26,10 @@ export default function HomePage() {
             { label: "Records", value: summary.totalRecords.toString() },
             { label: "Top company", value: summary.topCompany },
           ].map((item) => (
-            <div key={item.label} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <Link href="/analytics" key={item.label} className="block rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <p className="text-sm text-gray-500">{item.label}</p>
               <p className="mt-2 text-2xl font-semibold">{item.value}</p>
-            </div>
+            </Link>
           ))}
         </section>
 
@@ -38,13 +38,13 @@ export default function HomePage() {
             <h2 className="text-lg font-semibold">Top companies</h2>
             <div className="mt-4 space-y-3">
               {companies.map((company) => (
-                <div key={company.name} className="flex items-center justify-between border-b border-gray-200 pb-3 last:border-b-0 last:pb-0">
+                <Link key={company.name} href={`/company/${encodeURIComponent(company.name)}`} className="flex items-center justify-between border-b border-gray-200 pb-3 last:border-b-0 last:pb-0 hover:text-black">
                   <div>
                     <p className="font-medium">{company.name}</p>
                     <p className="text-sm text-gray-500">{company.recordCount} entries</p>
                   </div>
                   <p className="font-semibold">${Math.round(company.averageTotalComp).toLocaleString()}</p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -52,10 +52,11 @@ export default function HomePage() {
           <aside className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-semibold">Pages</h2>
             <ul className="mt-4 space-y-2 text-sm text-gray-700">
-              <li><Link href="/search">Search salaries</Link></li>
-              <li><Link href="/companies">Company list</Link></li>
-              <li><Link href="/compare">Compare pay</Link></li>
-              <li><Link href="/analytics">Analytics</Link></li>
+              <li><Link href="/search" className="hover:font-medium">Search salaries</Link></li>
+              <li><Link href="/companies" className="hover:font-medium">Company list</Link></li>
+              <li><Link href="/compare" className="hover:font-medium">Compare pay</Link></li>
+              <li><Link href="/analytics" className="hover:font-medium">Analytics</Link></li>
+              <li><Link href="/insights" className="hover:font-medium">Insights</Link></li>
             </ul>
           </aside>
         </section>
