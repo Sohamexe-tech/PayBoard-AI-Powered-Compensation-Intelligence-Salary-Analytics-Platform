@@ -91,5 +91,8 @@ model Compensation {
   location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   @@index([companyId, roleId, levelId, locationId])
+  @@index([totalCompensation])
+  @@index([baseSalary])
+  @@index([yearsExperience])
   @@index([fingerprint])
 }
