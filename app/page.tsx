@@ -7,9 +7,20 @@ export const dynamic = "force-dynamic";
 const money = (value: number | null) => value === null ? "Not available" : `$${Math.round(value).toLocaleString()}`;
 
 export default async function HomePage() {
+  let dashboard;
+  let companies;
   try {
-    const [dashboard, companies] = await Promise.all([getAnalyticsDashboard(), findCompanies()]);
-    return (
+    [dashboard, companies] = await Promise.all([getAnalyticsDashboard(), findCompanies()]);
+  } catch {
+    dashboard = null;
+    companies = [];
+  }
+
+  if (!dashboard) {
+    return <main className="mx-auto max-w-5xl px-6 py-12"><div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700"><h1 className="text-xl font-semibold">CompIQ is unavailable</h1><p className="mt-2 text-sm">The database connection is unavailable. Check the production DATABASE_URL and database status.</p></div></main>;
+  }
+
+  return (
       <main className="min-h-screen bg-gray-50 text-gray-900">
         <div className="mx-auto max-w-5xl px-6 py-10">
           <header className="mb-8 border-b border-gray-200 pb-4">
@@ -29,7 +40,4 @@ export default async function HomePage() {
         </div>
       </main>
     );
-  } catch {
-    return <main className="mx-auto max-w-5xl px-6 py-12"><div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700"><h1 className="text-xl font-semibold">CompIQ is unavailable</h1><p className="mt-2 text-sm">The database connection is unavailable. Check the production DATABASE_URL and database status.</p></div></main>;
-  }
 }
