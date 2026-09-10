@@ -27,6 +27,7 @@ function decimalToNumber(value: Prisma.Decimal): number {
 function buildWhere(filters: SalaryQuery): Prisma.CompensationWhereInput {
     const search = filters.search?.trim();
     const where: Prisma.CompensationWhereInput = {};
+    where.status = "APPROVED";
 
     if (search) {
         where.OR = [

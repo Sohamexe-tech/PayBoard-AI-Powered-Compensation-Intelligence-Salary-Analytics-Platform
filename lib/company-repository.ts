@@ -3,6 +3,7 @@ import { getCompanyIntelligence, type CompanyRecordForAnalytics } from "@/lib/co
 
 const companyInclude = {
     compensations: {
+        where: { status: "APPROVED" },
         include: { role: true, level: true, location: true },
     },
 } as const;

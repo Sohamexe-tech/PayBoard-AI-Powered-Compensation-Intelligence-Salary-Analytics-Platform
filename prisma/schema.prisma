@@ -15,6 +15,34 @@ enum CompensationSource {
   estimated
 }
 
+enum ContributionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  sessions     Session[]
+  contributions Contribution[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 model Company {
   id             String        @id @default(cuid())
   name           String        @unique
@@ -92,6 +120,7 @@ model Compensation {
   yearsExperience     Int
   currency            String             @default("USD")
   source              CompensationSource @default(public)
+  status              ContributionStatus @default(APPROVED)
   fingerprint         String             @unique
   submittedAt         DateTime           @default(now())
   createdAt           DateTime           @default(now())
@@ -107,4 +136,33 @@ model Compensation {
   @@index([baseSalary])
   @@index([yearsExperience])
   @@index([fingerprint])
+  @@index([status])
+}
+
+model Contribution {
+  id                String             @id @default(cuid())
+  userId            String
+  company           String
+  normalizedCompany String
+  role              String
+  normalizedRole    String
+  companyLevel      String
+  normalizedLevel   String
+  location          String
+  baseSalary        Decimal            @db.Decimal(18, 2)
+  bonus             Decimal            @db.Decimal(18, 2) @default(0)
+  stock             Decimal            @db.Decimal(18, 2) @default(0)
+  totalCompensation Decimal            @db.Decimal(18, 2)
+  yearsExperience   Int
+  currency          String
+  source            CompensationSource
+  fingerprint       String             @unique
+  status            ContributionStatus @default(PENDING)
+  reviewerNote      String?
+  submittedAt       DateTime           @default(now())
+  reviewedAt        DateTime?
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([status])
 }

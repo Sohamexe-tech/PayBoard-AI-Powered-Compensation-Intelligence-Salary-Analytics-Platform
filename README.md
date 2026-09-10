@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CompIQ
 
-## Getting Started
+CompIQ is a Next.js compensation intelligence application backed by PostgreSQL and Prisma.
 
-First, run the development server:
+## Requirements
+
+- Node.js 20+
+- PostgreSQL 14+
+- npm
+
+## Environment variables
+
+Copy `.env.example` to `.env` and replace the placeholders:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/compensation_intelligence?schema=public"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
+
+Never commit `.env` or database credentials.
+
+## Database setup
+
+Install dependencies and generate Prisma Client:
+
+```bash
+npm install
+npm run prisma:generate
+```
+
+Apply checked-in migrations:
+
+```bash
+npx prisma migrate deploy
+```
+
+Seed only the normalized-level reference data:
+
+```bash
+npm run db:seed
+```
+
+The seed is idempotent and does not insert fake compensation records.
+
+## Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+Configure `DATABASE_URL` and `NEXT_PUBLIC_APP_URL` in the hosting provider. Run `npx prisma migrate deploy` from CI or a release job before routing traffic to a new deployment.
 
-To learn more about Next.js, take a look at the following resources:
+## Verification
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm test
+npm run lint
+npm run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Production checklist
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Use a pooled PostgreSQL connection string for serverless deployments.
+- Run `npx prisma migrate deploy` before startup.
+- Run `npm run db:seed` for normalized-level reference rows.
+- Configure HTTPS so authentication cookies use the secure flag.
+- Keep `.env` and credentials out of source control.
+- Configure PostgreSQL backups, connection limits, and monitoring.
+- Review pending contributions before approval.
+- Run tests, lint, and build in CI.

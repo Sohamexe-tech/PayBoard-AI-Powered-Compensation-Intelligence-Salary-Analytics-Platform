@@ -89,6 +89,7 @@ export function calculateAnalyticsDashboard(records: AnalyticsRecord[], currency
 
 export async function getAnalyticsDashboard(): Promise<AnalyticsDashboard> {
     const records = await prisma.compensation.findMany({
+        where: { status: "APPROVED" },
         select: {
             totalCompensation: true,
             baseSalary: true,

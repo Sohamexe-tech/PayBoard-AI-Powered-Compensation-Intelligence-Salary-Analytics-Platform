@@ -26,6 +26,7 @@ const links = [
   { href: "/compare", label: "Compare" },
   { href: "/analytics", label: "Analytics" },
   { href: "/insights", label: "Insights" },
+  { href: "/contribute", label: "Contribute" },
 ];
 
 export default function RootLayout({ children }: { children: ReactNode }) {

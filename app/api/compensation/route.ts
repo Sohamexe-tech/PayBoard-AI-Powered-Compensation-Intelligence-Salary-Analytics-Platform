@@ -1,67 +1,30 @@
 import { NextResponse } from "next/server";
-import { applyFilters, paginateRecords } from "@/lib/analytics";
-import { normalizeCompanyName } from "@/lib/company";
-import { salaryRecords } from "@/lib/data";
-import { validateCompensationInput } from "@/lib/validation";
-import type { Currency } from "@/lib/types";
-
-const validCurrencies = new Set<Currency>(["USD", "INR", "EUR", "GBP"]);
-
-function parseCurrency(value: string | null): Currency | undefined {
-    if (!value) return undefined;
-    return validCurrencies.has(value as Currency) ? (value as Currency) : undefined;
-}
-
-export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-
-    const filters = {
-        company: searchParams.get("company") ?? undefined,
-        role: searchParams.get("role") ?? undefined,
-        level: searchParams.get("level") ?? undefined,
-        location: searchParams.get("location") ?? undefined,
-        minBaseSalary: searchParams.get("minBaseSalary") ? Number(searchParams.get("minBaseSalary")) : undefined,
-        maxBaseSalary: searchParams.get("maxBaseSalary") ? Number(searchParams.get("maxBaseSalary")) : undefined,
-        currency: parseCurrency(searchParams.get("currency")),
-        page: Number(searchParams.get("page") ?? "1"),
-        pageSize: Number(searchParams.get("pageSize") ?? "10"),
-    };
-
-    const filtered = applyFilters(salaryRecords, filters);
-    const paginated = paginateRecords(filtered, filters.page, filters.pageSize);
-
-    return NextResponse.json({
-        records: paginated.items,
-        meta: {
-            page: paginated.page,
-            pageSize: paginated.pageSize,
-            total: paginated.total,
-            totalPages: paginated.totalPages,
-        },
-    });
-}
+import { apiError } from "@/lib/api-errors";
+import { getCurrentUser } from "@/lib/auth";
+import { createContribution } from "@/lib/contributions";
+import { normalizeLevelName } from "@/lib/company";
 
 export async function POST(request: Request) {
+    const user = await getCurrentUser();
+    if (!user) return apiError("Authentication required; submit through the contribution workflow", 401);
+    let payload: unknown;
     try {
-        const payload = await request.json();
-        const validation = validateCompensationInput(payload);
-
-        if (!validation.success) {
-            return NextResponse.json(
-                { error: "invalid compensation payload", details: validation.error },
-                { status: 400 },
-            );
-        }
-
-        const record = {
-            ...validation.data,
-            id: crypto.randomUUID(),
-            normalizedCompany: normalizeCompanyName(validation.data.company),
-            createdAt: new Date().toISOString(),
-        };
-
-        return NextResponse.json({ record }, { status: 201 });
+        payload = await request.json();
     } catch {
-        return NextResponse.json({ error: "invalid json payload" }, { status: 400 });
+        return apiError("Request body must be valid JSON", 400);
+    }
+
+    try {
+        const input = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
+        const contribution = await createContribution(user.id, {
+            ...input,
+            normalizedLevel: typeof input.normalizedLevel === "string" ? input.normalizedLevel : normalizeLevelName(String(input.level ?? "")),
+        });
+        return NextResponse.json({ contribution }, { status: 201 });
+    } catch (error) {
+        const status = error && typeof error === "object" && "status" in error && typeof error.status === "number" ? error.status : 500;
+        const details = error && typeof error === "object" && "details" in error ? error.details : undefined;
+        if (status >= 500) console.error("Compensation ingestion failed", error);
+        return apiError(status === 409 ? "Compensation record already exists" : status === 400 ? "Invalid compensation payload" : "Unable to persist compensation record", status, details);
     }
 }

@@ -11,6 +11,7 @@ export type ComparisonQuery = {
 export async function findComparison(query: ComparisonQuery): Promise<{ rows: ComparisonRow[]; normalizedLevel: string; warning: string | null }> {
     const records = await prisma.compensation.findMany({
         where: {
+            status: "APPROVED",
             company: { normalizedName: { in: query.companies } },
             level: { normalizedLevel: { name: query.normalizedLevel } },
             ...(query.role ? { role: { normalizedTitle: { contains: query.role.toLowerCase() } } } : {}),
