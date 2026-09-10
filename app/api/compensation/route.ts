@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { applyFilters, paginateRecords } from "@/lib/analytics";
+import { normalizeCompanyName } from "@/lib/company";
 import { salaryRecords } from "@/lib/data";
 import { validateCompensationInput } from "@/lib/validation";
+import type { Currency } from "@/lib/types";
+
+const validCurrencies = new Set<Currency>(["USD", "INR", "EUR", "GBP"]);
+
+function parseCurrency(value: string | null): Currency | undefined {
+    if (!value) return undefined;
+    return validCurrencies.has(value as Currency) ? (value as Currency) : undefined;
+}
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -13,7 +22,7 @@ export async function GET(request: Request) {
         location: searchParams.get("location") ?? undefined,
         minBaseSalary: searchParams.get("minBaseSalary") ? Number(searchParams.get("minBaseSalary")) : undefined,
         maxBaseSalary: searchParams.get("maxBaseSalary") ? Number(searchParams.get("maxBaseSalary")) : undefined,
-        currency: searchParams.get("currency") ?? undefined,
+        currency: parseCurrency(searchParams.get("currency")),
         page: Number(searchParams.get("page") ?? "1"),
         pageSize: Number(searchParams.get("pageSize") ?? "10"),
     };
@@ -47,7 +56,7 @@ export async function POST(request: Request) {
         const record = {
             ...validation.data,
             id: crypto.randomUUID(),
-            normalizedCompany: payload.company,
+            normalizedCompany: normalizeCompanyName(validation.data.company),
             createdAt: new Date().toISOString(),
         };
 
