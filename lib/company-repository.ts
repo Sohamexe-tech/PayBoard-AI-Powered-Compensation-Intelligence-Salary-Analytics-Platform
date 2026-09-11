@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { getCompanyIntelligence, type CompanyRecordForAnalytics } from "@/lib/company-analytics";
+import {
+    getCompanyIntelligence,
+    type CompanyRecordForAnalytics,
+} from "@/lib/company-analytics";
 
 const companyInclude = {
     compensations: {
@@ -8,15 +11,21 @@ const companyInclude = {
     },
 } as const;
 
-function mapRecords(records: Array<{
-    totalCompensation: { toString(): string };
-    baseSalary: { toString(): string };
-    bonus: { toString(): string };
-    stock: { toString(): string };
-    role: { title: string };
-    level: { name: string };
-    location: { city: string; state: string | null; country: string };
-}>): CompanyRecordForAnalytics[] {
+function mapRecords(
+    records: Array<{
+        totalCompensation: { toString(): string };
+        baseSalary: { toString(): string };
+        bonus: { toString(): string };
+        stock: { toString(): string };
+        role: { title: string };
+        level: { name: string };
+        location: {
+            city: string;
+            state: string | null;
+            country: string;
+        };
+    }>
+): CompanyRecordForAnalytics[] {
     return records.map((record) => ({
         totalCompensation: Number(record.totalCompensation.toString()),
         baseSalary: Number(record.baseSalary.toString()),
@@ -24,7 +33,13 @@ function mapRecords(records: Array<{
         stock: Number(record.stock.toString()),
         role: record.role.title,
         level: record.level.name,
-        location: [record.location.city, record.location.state, record.location.country].filter(Boolean).join(", "),
+        location: [
+            record.location.city,
+            record.location.state,
+            record.location.country,
+        ]
+            .filter(Boolean)
+            .join(", "),
         city: record.location.city,
         country: record.location.country,
     }));
@@ -32,8 +47,19 @@ function mapRecords(records: Array<{
 
 export async function findCompanies(search?: string) {
     const companies = await prisma.company.findMany({
-        where: search ? { name: { contains: search.trim(), mode: "insensitive" } } : undefined,
-        orderBy: { normalizedName: "asc" },
+        where: search
+            ? {
+                name: {
+                    contains: search.trim(),
+                    mode: "insensitive",
+                },
+            }
+            : undefined,
+
+        orderBy: {
+            normalizedName: "asc",
+        },
+
         include: companyInclude,
     });
 
@@ -43,12 +69,18 @@ export async function findCompanies(search?: string) {
         normalizedName: company.normalizedName,
         industry: company.industry,
         website: company.website,
-        intelligence: getCompanyIntelligence(mapRecords(company.compensations)),
+        intelligence: getCompanyIntelligence(
+            mapRecords(company.compensations)
+        ),
     }));
 }
 
 export async function findCompanyById(id: string) {
-    const company = await prisma.company.findUnique({ where: { id }, include: companyInclude });
+    const company = await prisma.company.findUnique({
+        where: { id },
+        include: companyInclude,
+    });
+
     if (!company) return null;
 
     return {
@@ -57,6 +89,8 @@ export async function findCompanyById(id: string) {
         normalizedName: company.normalizedName,
         industry: company.industry,
         website: company.website,
-        intelligence: getCompanyIntelligence(mapRecords(company.compensations)),
+        intelligence: getCompanyIntelligence(
+            mapRecords(company.compensations)
+        ),
     };
 }
