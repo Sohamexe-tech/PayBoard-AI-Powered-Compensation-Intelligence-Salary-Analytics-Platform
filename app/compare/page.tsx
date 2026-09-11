@@ -1,434 +1,507 @@
-import Link from "next/link";
+"use client";
 
-import { getAnalyticsDashboard } from "@/lib/analytics-service";
-import { findCompanies } from "@/lib/company-repository";
+import { useEffect, useMemo, useState } from "react";
 
-export const dynamic = "force-dynamic";
-
-const money = (value: number | null) =>
-    value === null
-        ? "Not available"
-        : `$${Math.round(value).toLocaleString()}`;
-
-const companyColors: Record<string, string> = {
-    Google: "bg-blue-50 text-blue-700",
-    Microsoft: "bg-cyan-50 text-cyan-700",
-    Amazon: "bg-orange-50 text-orange-700",
-    Meta: "bg-indigo-50 text-indigo-700",
-    Apple: "bg-slate-100 text-slate-700",
-    Netflix: "bg-red-50 text-red-700",
-    Adobe: "bg-red-50 text-red-700",
-    IBM: "bg-blue-50 text-blue-700",
-    TCS: "bg-sky-50 text-sky-700",
-    Infosys: "bg-emerald-50 text-emerald-700",
+type Company = {
+    id: string;
+    name: string;
 };
 
-export default async function HomePage() {
-    let dashboard;
-    let companies;
+type ComparisonResult = {
+    companyId: string;
+    companyName: string;
+    sampleSize: number;
+    averageBaseSalary: number;
+    medianBaseSalary: number;
+    averageTotalCompensation: number;
+    medianTotalCompensation: number;
+};
 
-    try {
-        [dashboard, companies] = await Promise.all([
-            getAnalyticsDashboard(),
-            findCompanies(),
-        ]);
-    } catch {
-        dashboard = null;
-        companies = [];
-    }
+const companiesList: Company[] = [
+    { id: "google", name: "Google" },
+    { id: "microsoft", name: "Microsoft" },
+    { id: "amazon", name: "Amazon" },
+    { id: "meta", name: "Meta" },
+    { id: "apple", name: "Apple" },
+    { id: "netflix", name: "Netflix" },
+    { id: "adobe", name: "Adobe" },
+    { id: "ibm", name: "IBM" },
+    { id: "tcs", name: "TCS" },
+    { id: "infosys", name: "Infosys" },
+];
 
-    if (!dashboard) {
-        return (
-            <main className="dashboard-container">
-                <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-red-700">
-                    <h1 className="text-xl font-bold">
-                        CompIQ is unavailable
-                    </h1>
+export default function ComparePage() {
+    const [selectedCompanies, setSelectedCompanies] = useState<string[]>([
+        "google",
+        "microsoft",
+    ]);
 
-                    <p className="mt-2 text-sm">
-                        The database connection is unavailable. Check
-                        PostgreSQL and your DATABASE_URL.
-                    </p>
-                </div>
-            </main>
+    const [role, setRole] = useState("");
+    const [level, setLevel] = useState("Senior");
+    const [location, setLocation] = useState("All locations");
+
+    const [results, setResults] = useState<ComparisonResult[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [searched, setSearched] = useState(false);
+    const [error, setError] = useState("");
+
+    const toggleCompany = (id: string) => {
+        setSelectedCompanies((current) => {
+            if (current.includes(id)) {
+                return current.filter((companyId) => companyId !== id);
+            }
+
+            if (current.length >= 4) {
+                return current;
+            }
+
+            return [...current, id];
+        });
+    };
+
+    const runComparison = async () => {
+        if (selectedCompanies.length < 2) {
+            setError("Select at least two companies.");
+            return;
+        }
+
+        setLoading(true);
+        setError("");
+        setSearched(true);
+
+        try {
+            const params = new URLSearchParams();
+
+            params.set("companies", selectedCompanies.join(","));
+
+            if (role.trim()) {
+                params.set("role", role.trim());
+            }
+
+            if (level) {
+                params.set("level", level);
+            }
+
+            if (location !== "All locations") {
+                params.set("location", location);
+            }
+
+            const response = await fetch(`/api/compare?${params.toString()}`);
+
+            if (!response.ok) {
+                throw new Error("Unable to load comparison.");
+            }
+
+            const data = await response.json();
+
+            setResults(
+                data.results ??
+                data.comparisons ??
+                data.data ??
+                []
+            );
+        } catch (err) {
+            setResults([]);
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Something went wrong."
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        runComparison();
+    }, []);
+
+    const maxBaseSalary = useMemo(() => {
+        return Math.max(
+            ...results.map((item) => item.averageBaseSalary || 0),
+            1
         );
-    }
+    }, [results]);
+
+    const maxTotalCompensation = useMemo(() => {
+        return Math.max(
+            ...results.map(
+                (item) => item.averageTotalCompensation || 0
+            ),
+            1
+        );
+    }, [results]);
+
+    const formatMoney = (value: number) =>
+        new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 0,
+        }).format(value || 0);
 
     return (
-        <main>
-            <section className="relative overflow-hidden border-b border-slate-200 bg-white">
-                <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-indigo-100/60 blur-3xl" />
+        <main className="compare-page">
+            <section className="compare-header">
+                <div>
+                    <span className="eyebrow">COMPANY COMPARISON</span>
 
-                <div className="absolute -left-32 bottom-0 h-80 w-80 rounded-full bg-blue-100/50 blur-3xl" />
+                    <h1>Compare compensation</h1>
 
-                <div className="dashboard-container relative">
-                    <div className="grid items-center gap-12 lg:grid-cols-[1.25fr_.75fr]">
-                        <div>
-                            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700">
-                                <span className="h-2 w-2 rounded-full bg-indigo-600" />
+                    <p>
+                        Compare salary levels across companies using the same role,
+                        experience level and location criteria.
+                    </p>
+                </div>
+            </section>
 
-                                Compensation intelligence platform
-                            </div>
-
-                            <h1 className="max-w-4xl text-5xl font-black tracking-tight text-slate-950 md:text-6xl">
-                                Understand the market.
-                                <span className="block text-indigo-600">
-                                    Compare with confidence.
-                                </span>
-                            </h1>
-
-                            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-                                Explore compensation benchmarks across
-                                companies, roles, experience levels and
-                                locations using structured compensation
-                                data.
-                            </p>
-
-                            <div className="mt-8 flex flex-wrap gap-3">
-                                <Link
-                                    href="/search"
-                                    className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700"
-                                >
-                                    Explore salaries →
-                                </Link>
-
-                                <Link
-                                    href="/compare"
-                                    className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
-                                >
-                                    Compare companies
-                                </Link>
-                            </div>
-
-                            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-slate-500">
-                                <span>✓ Structured compensation</span>
-                                <span>✓ Normalized career levels</span>
-                                <span>✓ Approved records</span>
+            <section className="compare-layout">
+                <aside className="compare-sidebar">
+                    <div className="compare-panel">
+                        <div className="panel-title">
+                            <span>01</span>
+                            <div>
+                                <h2>Select companies</h2>
+                                <p>Choose 2–4 companies</p>
                             </div>
                         </div>
 
-                        <div className="relative">
-                            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-200/70">
-                                <div className="mb-5 flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                            Market snapshot
-                                        </p>
+                        <div className="company-selector">
+                            {companiesList.map((company) => {
+                                const selected = selectedCompanies.includes(company.id);
 
-                                        <p className="mt-1 font-bold text-slate-900">
-                                            Compensation overview
-                                        </p>
-                                    </div>
+                                return (
+                                    <button
+                                        key={company.id}
+                                        type="button"
+                                        onClick={() => toggleCompany(company.id)}
+                                        className={`company-option ${selected ? "selected" : ""
+                                            }`}
+                                    >
+                                        <span className="company-option-logo">
+                                            {company.name.charAt(0)}
+                                        </span>
 
-                                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                                        Live dataset
-                                    </span>
-                                </div>
+                                        <span>{company.name}</span>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="rounded-2xl bg-slate-50 p-4">
-                                        <p className="text-xs text-slate-500">
-                                            Median total
-                                        </p>
-
-                                        <p className="mt-2 text-2xl font-black text-slate-900">
-                                            {money(
-                                                dashboard.summary
-                                                    .medianTotal
-                                            )}
-                                        </p>
-                                    </div>
-
-                                    <div className="rounded-2xl bg-indigo-50 p-4">
-                                        <p className="text-xs text-indigo-500">
-                                            Average base
-                                        </p>
-
-                                        <p className="mt-2 text-2xl font-black text-indigo-700">
-                                            {money(
-                                                dashboard.summary
-                                                    .averageBase
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="mt-4 rounded-2xl border border-slate-100 p-4">
-                                    <div className="mb-4 flex items-center justify-between">
-                                        <p className="text-sm font-bold text-slate-800">
-                                            Top companies
-                                        </p>
-
-                                        <Link
-                                            href="/companies"
-                                            className="text-xs font-bold text-indigo-600"
-                                        >
-                                            View all
-                                        </Link>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        {dashboard.medianByCompany
-                                            .slice(0, 4)
-                                            .map((company) => (
-                                                <div
-                                                    key={company.name}
-                                                    className="flex items-center justify-between"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div
-                                                            className={`flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black ${companyColors[
-                                                                company
-                                                                    .name
-                                                            ] ??
-                                                                "bg-indigo-50 text-indigo-700"
-                                                                }`}
-                                                        >
-                                                            {company.name.charAt(
-                                                                0
-                                                            )}
-                                                        </div>
-
-                                                        <div>
-                                                            <p className="text-sm font-bold text-slate-800">
-                                                                {
-                                                                    company.name
-                                                                }
-                                                            </p>
-
-                                                            <p className="text-xs text-slate-400">
-                                                                {
-                                                                    company.sampleSize
-                                                                }{" "}
-                                                                records
-                                                            </p>
-                                                        </div>
-                                                    </div>
-
-                                                    <p className="text-sm font-bold text-slate-900">
-                                                        {money(
-                                                            company.median
-                                                        )}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                    </div>
-                                </div>
-                            </div>
+                                        {selected && (
+                                            <span className="checkmark">✓</span>
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
-                </div>
-            </section>
 
-            <section className="dashboard-container">
-                <div className="mb-6">
-                    <p className="page-eyebrow">Overview</p>
+                    <div className="compare-panel">
+                        <div className="panel-title">
+                            <span>02</span>
 
-                    <h2 className="text-2xl font-black tracking-tight text-slate-900">
-                        Compensation at a glance
-                    </h2>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <Link
-                        href="/analytics"
-                        className="ui-card group p-6 transition hover:-translate-y-1"
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-slate-500">
-                                Average base salary
-                            </span>
-
-                            <span className="rounded-xl bg-indigo-50 p-2 text-indigo-600">
-                                $
-                            </span>
-                        </div>
-
-                        <p className="mt-5 text-3xl font-black text-slate-900">
-                            {money(dashboard.summary.averageBase)}
-                        </p>
-
-                        <p className="mt-2 text-xs text-slate-400">
-                            Across approved records
-                        </p>
-                    </Link>
-
-                    <Link
-                        href="/analytics"
-                        className="ui-card group p-6 transition hover:-translate-y-1"
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-slate-500">
-                                Median total compensation
-                            </span>
-
-                            <span className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
-                                ↑
-                            </span>
-                        </div>
-
-                        <p className="mt-5 text-3xl font-black text-slate-900">
-                            {money(dashboard.summary.medianTotal)}
-                        </p>
-
-                        <p className="mt-2 text-xs text-slate-400">
-                            Base + bonus + stock
-                        </p>
-                    </Link>
-
-                    <Link
-                        href="/search"
-                        className="ui-card group p-6 transition hover:-translate-y-1"
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-slate-500">
-                                Approved records
-                            </span>
-
-                            <span className="rounded-xl bg-blue-50 p-2 text-blue-600">
-                                #
-                            </span>
-                        </div>
-
-                        <p className="mt-5 text-3xl font-black text-slate-900">
-                            {dashboard.sampleSize.toLocaleString()}
-                        </p>
-
-                        <p className="mt-2 text-xs text-slate-400">
-                            Verified benchmark records
-                        </p>
-                    </Link>
-
-                    <Link
-                        href="/companies"
-                        className="ui-card group p-6 transition hover:-translate-y-1"
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-slate-500">
-                                Companies
-                            </span>
-
-                            <span className="rounded-xl bg-orange-50 p-2 text-orange-600">
-                                ◈
-                            </span>
-                        </div>
-
-                        <p className="mt-5 text-3xl font-black text-slate-900">
-                            {companies.length}
-                        </p>
-
-                        <p className="mt-2 text-xs text-slate-400">
-                            Companies in the dataset
-                        </p>
-                    </Link>
-                </div>
-            </section>
-
-            <section className="dashboard-container pt-0">
-                <div className="grid gap-6 lg:grid-cols-[1.5fr_.5fr]">
-                    <div className="ui-card overflow-hidden">
-                        <div className="border-b border-slate-100 px-6 py-5">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h2 className="font-bold text-slate-900">
-                                        Company benchmarks
-                                    </h2>
-
-                                    <p className="mt-1 text-sm text-slate-500">
-                                        Median total compensation by
-                                        company
-                                    </p>
-                                </div>
-
-                                <Link
-                                    href="/companies"
-                                    className="text-sm font-bold text-indigo-600 hover:text-indigo-700"
-                                >
-                                    View companies →
-                                </Link>
+                            <div>
+                                <h2>Comparison criteria</h2>
+                                <p>Keep the criteria consistent</p>
                             </div>
                         </div>
 
-                        <div className="divide-y divide-slate-100">
-                            {dashboard.medianByCompany
-                                .slice(0, 7)
-                                .map((company, index) => {
-                                    const maximum =
-                                        dashboard.medianByCompany[0]
-                                            ?.median ?? 1;
+                        <label className="form-field">
+                            <span>Role</span>
 
-                                    const width =
-                                        ((company.median ?? 0) /
-                                            maximum) *
-                                        100;
+                            <input
+                                value={role}
+                                onChange={(event) => setRole(event.target.value)}
+                                placeholder="e.g. Software Engineer"
+                            />
+                        </label>
 
-                                    return (
-                                        <div
-                                            key={company.name}
-                                            className="px-6 py-5"
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="w-5 text-xs font-bold text-slate-400">
-                                                        0{index + 1}
-                                                    </span>
+                        <label className="form-field">
+                            <span>Experience level</span>
 
-                                                    <span className="font-bold text-slate-800">
-                                                        {company.name}
-                                                    </span>
-                                                </div>
+                            <select
+                                value={level}
+                                onChange={(event) => setLevel(event.target.value)}
+                            >
+                                <option value="">All levels</option>
+                                <option value="Intern">Intern</option>
+                                <option value="Entry">Entry</option>
+                                <option value="Junior">Junior</option>
+                                <option value="Mid">Mid</option>
+                                <option value="Senior">Senior</option>
+                                <option value="Staff">Staff</option>
+                                <option value="Principal">Principal</option>
+                                <option value="Manager">Manager</option>
+                            </select>
+                        </label>
 
-                                                <span className="font-bold text-slate-900">
-                                                    {money(company.median)}
-                                                </span>
+                        <label className="form-field">
+                            <span>Location</span>
+
+                            <select
+                                value={location}
+                                onChange={(event) =>
+                                    setLocation(event.target.value)
+                                }
+                            >
+                                <option>All locations</option>
+                                <option>United States</option>
+                                <option>India</option>
+                            </select>
+                        </label>
+
+                        <button
+                            type="button"
+                            onClick={runComparison}
+                            disabled={loading}
+                            className="compare-run-button"
+                        >
+                            {loading ? "Comparing..." : "Run comparison"}
+                        </button>
+                    </div>
+                </aside>
+
+                <section className="comparison-results">
+                    <div className="results-header">
+                        <div>
+                            <span className="eyebrow">RESULTS</span>
+
+                            <h2>
+                                {searched
+                                    ? "Compensation comparison"
+                                    : "Ready to compare"}
+                            </h2>
+                        </div>
+
+                        {results.length > 0 && (
+                            <span className="result-count">
+                                {results.length} companies
+                            </span>
+                        )}
+                    </div>
+
+                    {error && (
+                        <div className="compare-error">
+                            {error}
+                        </div>
+                    )}
+
+                    {!loading && results.length === 0 && !error && (
+                        <div className="empty-comparison">
+                            <div className="empty-icon">⇄</div>
+
+                            <h3>No comparison data found</h3>
+
+                            <p>
+                                Try changing the role, experience level or location.
+                            </p>
+                        </div>
+                    )}
+
+                    {loading && (
+                        <div className="empty-comparison">
+                            <div className="loading-spinner" />
+
+                            <h3>Analyzing compensation data</h3>
+
+                            <p>
+                                Comparing the selected companies...
+                            </p>
+                        </div>
+                    )}
+
+                    {!loading && results.length > 0 && (
+                        <>
+                            <div className="comparison-cards">
+                                {results.map((item) => (
+                                    <article
+                                        key={item.companyId}
+                                        className="comparison-company-card"
+                                    >
+                                        <div className="comparison-company-header">
+                                            <div className="large-company-logo">
+                                                {item.companyName.charAt(0)}
                                             </div>
 
-                                            <div className="ml-8 mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                                            <div>
+                                                <h3>{item.companyName}</h3>
+
+                                                <span>
+                                                    {item.sampleSize} matching records
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="salary-highlight">
+                                            <span>Average base</span>
+
+                                            <strong>
+                                                {formatMoney(item.averageBaseSalary)}
+                                            </strong>
+                                        </div>
+
+                                        <div className="salary-highlight">
+                                            <span>Average total compensation</span>
+
+                                            <strong>
+                                                {formatMoney(
+                                                    item.averageTotalCompensation
+                                                )}
+                                            </strong>
+                                        </div>
+                                    </article>
+                                ))}
+                            </div>
+
+                            <div className="comparison-panel-wide">
+                                <div className="chart-heading">
+                                    <div>
+                                        <span className="eyebrow">BASE SALARY</span>
+                                        <h2>Average base salary</h2>
+                                    </div>
+
+                                    <span className="chart-unit">USD / year</span>
+                                </div>
+
+                                <div className="salary-bars">
+                                    {results.map((item) => (
+                                        <div
+                                            className="salary-bar-row"
+                                            key={item.companyId}
+                                        >
+                                            <div className="bar-label">
+                                                <span>{item.companyName}</span>
+
+                                                <strong>
+                                                    {formatMoney(item.averageBaseSalary)}
+                                                </strong>
+                                            </div>
+
+                                            <div className="bar-track">
                                                 <div
-                                                    className="h-full rounded-full bg-indigo-600"
+                                                    className="bar-fill"
                                                     style={{
-                                                        width: `${width}%`,
+                                                        width: `${(item.averageBaseSalary /
+                                                            maxBaseSalary) *
+                                                            100
+                                                            }%`,
                                                     }}
                                                 />
                                             </div>
                                         </div>
-                                    );
-                                })}
-                        </div>
-                    </div>
+                                    ))}
+                                </div>
+                            </div>
 
-                    <div className="rounded-3xl bg-slate-950 p-7 text-white shadow-xl">
-                        <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-indigo-200">
-                            Explore CompIQ
+                            <div className="comparison-panel-wide">
+                                <div className="chart-heading">
+                                    <div>
+                                        <span className="eyebrow">TOTAL COMPENSATION</span>
+                                        <h2>Average total compensation</h2>
+                                    </div>
+
+                                    <span className="chart-unit">USD / year</span>
+                                </div>
+
+                                <div className="salary-bars">
+                                    {results.map((item) => (
+                                        <div
+                                            className="salary-bar-row"
+                                            key={item.companyId}
+                                        >
+                                            <div className="bar-label">
+                                                <span>{item.companyName}</span>
+
+                                                <strong>
+                                                    {formatMoney(
+                                                        item.averageTotalCompensation
+                                                    )}
+                                                </strong>
+                                            </div>
+
+                                            <div className="bar-track">
+                                                <div
+                                                    className="bar-fill total"
+                                                    style={{
+                                                        width: `${(item.averageTotalCompensation /
+                                                            maxTotalCompensation) *
+                                                            100
+                                                            }%`,
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="comparison-panel-wide">
+                                <div className="chart-heading">
+                                    <div>
+                                        <span className="eyebrow">DETAILED VIEW</span>
+                                        <h2>Company comparison</h2>
+                                    </div>
+                                </div>
+
+                                <div className="comparison-table-wrapper">
+                                    <table className="comparison-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Company</th>
+                                                <th>Records</th>
+                                                <th>Avg. Base</th>
+                                                <th>Median Base</th>
+                                                <th>Avg. Total</th>
+                                                <th>Median Total</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            {results.map((item) => (
+                                                <tr key={item.companyId}>
+                                                    <td>
+                                                        <strong>{item.companyName}</strong>
+                                                    </td>
+
+                                                    <td>{item.sampleSize}</td>
+
+                                                    <td>
+                                                        {formatMoney(
+                                                            item.averageBaseSalary
+                                                        )}
+                                                    </td>
+
+                                                    <td>
+                                                        {formatMoney(
+                                                            item.medianBaseSalary
+                                                        )}
+                                                    </td>
+
+                                                    <td>
+                                                        {formatMoney(
+                                                            item.averageTotalCompensation
+                                                        )}
+                                                    </td>
+
+                                                    <td>
+                                                        {formatMoney(
+                                                            item.medianTotalCompensation
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    <div className="demo-data-note">
+                        <strong>Demo dataset</strong>
+
+                        <span>
+                            Salary figures are based on the current CompIQ dataset and
+                            are intended for demonstration and analysis.
                         </span>
-
-                        <h2 className="mt-5 text-2xl font-black">
-                            Make better compensation decisions.
-                        </h2>
-
-                        <p className="mt-4 text-sm leading-7 text-slate-400">
-                            Search the market, compare equivalent career
-                            levels and understand how compensation changes
-                            across companies.
-                        </p>
-
-                        <div className="mt-7 space-y-3">
-                            <Link
-                                href="/search"
-                                className="block rounded-xl bg-white px-4 py-3 text-center text-sm font-bold text-slate-900 transition hover:bg-indigo-50"
-                            >
-                                Search salaries
-                            </Link>
-
-                            <Link
-                                href="/compare"
-                                className="block rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10"
-                            >
-                                Compare companies
-                            </Link>
-                        </div>
                     </div>
-                </div>
+                </section>
             </section>
         </main>
     );
