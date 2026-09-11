@@ -17,17 +17,16 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "CompIQ | Compensation Intelligence",
-  description:
-    "CompIQ is a compensation intelligence and benchmarking platform.",
+  description: "Compensation intelligence and salary benchmarking platform",
 };
 
-const navigation = [
-  { href: "/", label: "Dashboard", icon: "⌂" },
-  { href: "/search", label: "Salary Search", icon: "⌕" },
-  { href: "/companies", label: "Companies", icon: "▦" },
-  { href: "/compare", label: "Compare", icon: "⇄" },
-  { href: "/analytics", label: "Analytics", icon: "◒" },
-  { href: "/insights", label: "Insights", icon: "✦" },
+const links = [
+  { href: "/", label: "Dashboard" },
+  { href: "/search", label: "Salary Search" },
+  { href: "/companies", label: "Companies" },
+  { href: "/compare", label: "Compare" },
+  { href: "/analytics", label: "Analytics" },
+  { href: "/insights", label: "Insights" },
 ];
 
 export default function RootLayout({
@@ -41,99 +40,61 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <body>
-        <div className="app-shell">
-          <header className="topbar">
-            <div className="topbar-inner">
-              <Link href="/" className="brand">
-                <span className="brand-mark">
-                  C
-                </span>
+        <header className="topbar">
+          <div className="topbar-inner">
+            <Link href="/" className="brand">
+              <span className="brand-mark">C</span>
 
-                <span>
-                  <strong>CompIQ</strong>
-                  <small>
-                    Compensation Intelligence
-                  </small>
-                </span>
+              <span>
+                <strong>CompIQ</strong>
+                <small>Compensation Intelligence</small>
+              </span>
+            </Link>
+
+            <nav className="main-nav">
+              {links.map((link) => (
+                <Link key={link.href} href={link.href}>
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+
+            <div className="nav-actions">
+              <Link
+                href="/contribute"
+                className="nav-contribute"
+              >
+                + Contribute
               </Link>
 
-              <nav className="desktop-nav">
-                {navigation.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="nav-link"
-                  >
-                    <span>{item.icon}</span>
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-
-              <div className="topbar-actions">
-                <Link
-                  href="/contribute"
-                  className="contribute-button"
-                >
-                  + Contribute
-                </Link>
-
-                <Link
-                  href="/login"
-                  className="login-button"
-                >
-                  Sign in
-                </Link>
-              </div>
+              <Link
+                href="/login"
+                className="nav-login"
+              >
+                Sign in
+              </Link>
             </div>
-          </header>
+          </div>
+        </header>
 
-          <main className="site-content">
-            {children}
-          </main>
+        {children}
 
-          <footer className="site-footer">
-            <div className="footer-inner">
-              <div>
-                <div className="footer-brand">
-                  <span className="brand-mark small">
-                    C
-                  </span>
+        <footer className="footer">
+          <div>
+            <strong>CompIQ</strong>
 
-                  <strong>CompIQ</strong>
-                </div>
+            <p>
+              Compensation intelligence for better career decisions.
+            </p>
+          </div>
 
-                <p>
-                  Compensation intelligence for smarter
-                  career decisions.
-                </p>
-              </div>
-
-              <div className="footer-links">
-                <Link href="/search">
-                  Salary Search
-                </Link>
-
-                <Link href="/companies">
-                  Companies
-                </Link>
-
-                <Link href="/compare">
-                  Compare
-                </Link>
-
-                <Link href="/analytics">
-                  Analytics
-                </Link>
-              </div>
-            </div>
-
-            <div className="footer-bottom">
-              © 2026 CompIQ. Built for compensation
-              benchmarking.
-            </div>
-          </footer>
-        </div>
+          <div className="footer-links">
+            <Link href="/search">Search</Link>
+            <Link href="/companies">Companies</Link>
+            <Link href="/compare">Compare</Link>
+            <Link href="/analytics">Analytics</Link>
+          </div>
+        </footer>
       </body>
     </html>
   );

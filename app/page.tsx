@@ -1,229 +1,361 @@
 import Link from "next/link";
+
 import { getAnalyticsDashboard } from "@/lib/analytics-service";
 import { findCompanies } from "@/lib/company-repository";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const [analytics, companies] = await Promise.all([
-    getAnalyticsDashboard(),
-    findCompanies(),
-  ]);
+const money = (value: number | null) => {
+  if (value === null || value === undefined) {
+    return "Not available";
+  }
 
-  const stats = analytics?.stats ?? analytics?.summary ?? {};
+  return `$${Math.round(value).toLocaleString()}`;
+};
 
-  const averageBase =
-    stats.averageBaseSalary ??
-    stats.avgBaseSalary ??
-    analytics?.averageBaseSalary ??
-    0;
+export default async function HomePage() {
+  let dashboard;
+  let companies;
 
-  const medianTotal =
-    stats.medianTotalCompensation ??
-    stats.medianTotal ??
-    analytics?.medianTotalCompensation ??
-    0;
+  try {
+    [dashboard, companies] = await Promise.all([
+      getAnalyticsDashboard(),
+      findCompanies(),
+    ]);
+  } catch {
+    dashboard = null;
+    companies = [];
+  }
 
-  const approvedRecords =
-    stats.approvedRecords ??
-    stats.totalRecords ??
-    analytics?.approvedRecords ??
-    0;
+  if (!dashboard) {
+    return (
+      <main className="dashboard-page">
+        <div className="compare-error">
+          <h1>CompIQ is unavailable</h1>
 
-  const companyCount =
-    stats.companyCount ??
-    stats.companies ??
-    companies?.length ??
-    0;
-
-  const topCompanies = Array.isArray(
-    analytics?.topCompanies ?? analytics?.companies
-  )
-    ? analytics?.topCompanies ?? analytics?.companies
-    : [];
-
-  const formatMoney = (value: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(value || 0);
+          <p>
+            The database connection is unavailable.
+            Check your DATABASE_URL and database status.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="dashboard-page">
+      {/* HERO */}
+
       <section className="dashboard-hero">
         <div>
-          <span className="eyebrow">COMPENSATION INTELLIGENCE</span>
+          <span className="eyebrow">
+            COMPENSATION INTELLIGENCE
+          </span>
 
-          <h1>Welcome to CompIQ</h1>
+          <h1>
+            Understand the market.
+            <br />
+            Compare with confidence.
+          </h1>
 
           <p>
-            Get a clear view of the compensation market, discover salary
-            patterns, and make data-driven career decisions.
+            CompIQ helps you explore compensation data across
+            companies, roles, experience levels and locations.
           </p>
 
           <div className="hero-actions">
-            <Link href="/search" className="btn btn-primary">
+            <Link
+              href="/search"
+              className="btn btn-primary"
+            >
               Explore salaries
             </Link>
 
-            <Link href="/compare" className="btn btn-secondary">
+            <Link
+              href="/compare"
+              className="btn btn-secondary"
+            >
               Compare companies
             </Link>
           </div>
         </div>
 
         <div className="dashboard-hero-card">
-          <span>Market overview</span>
+          <span>MARKET OVERVIEW</span>
 
-          <strong>{approvedRecords.toLocaleString()}</strong>
+          <strong>
+            {dashboard.sampleSize.toLocaleString()}
+          </strong>
 
-          <p>approved compensation records</p>
+          <p>
+            approved compensation records
+          </p>
 
           <div className="hero-card-line" />
 
           <small>
-            Data is aggregated across companies, roles and experience levels.
+            Public analytics are calculated from approved
+            compensation records.
           </small>
         </div>
       </section>
 
+      {/* MARKET SNAPSHOT */}
+
       <section className="section-block">
         <div className="section-heading">
           <div>
-            <span className="eyebrow">MARKET SNAPSHOT</span>
-            <h2>Compensation at a glance</h2>
+            <span className="eyebrow">
+              MARKET SNAPSHOT
+            </span>
+
+            <h2>
+              Compensation at a glance
+            </h2>
           </div>
 
-          <Link href="/analytics" className="text-link">
+          <Link
+            href="/analytics"
+            className="text-link"
+          >
             View analytics →
           </Link>
         </div>
 
         <div className="stats-grid">
-          <div className="stat-card">
-            <span>Average Base Salary</span>
-            <strong>{formatMoney(averageBase)}</strong>
-            <p>Across approved records</p>
-          </div>
+          <Link
+            href="/analytics"
+            className="stat-card"
+          >
+            <span>
+              Average Base Salary
+            </span>
 
-          <div className="stat-card">
-            <span>Median Total Compensation</span>
-            <strong>{formatMoney(medianTotal)}</strong>
-            <p>Base + bonus + equity</p>
-          </div>
+            <strong>
+              {money(
+                dashboard.summary.averageBase
+              )}
+            </strong>
 
-          <div className="stat-card">
-            <span>Approved Records</span>
-            <strong>{approvedRecords.toLocaleString()}</strong>
-            <p>Available for analysis</p>
-          </div>
+            <p>
+              Across approved records
+            </p>
+          </Link>
 
-          <div className="stat-card">
-            <span>Companies</span>
-            <strong>{companyCount}</strong>
-            <p>Across the dataset</p>
-          </div>
+          <Link
+            href="/analytics"
+            className="stat-card"
+          >
+            <span>
+              Median Total Compensation
+            </span>
+
+            <strong>
+              {money(
+                dashboard.summary.medianTotal
+              )}
+            </strong>
+
+            <p>
+              Base + bonus + stock
+            </p>
+          </Link>
+
+          <Link
+            href="/analytics"
+            className="stat-card"
+          >
+            <span>
+              Approved Records
+            </span>
+
+            <strong>
+              {dashboard.sampleSize.toLocaleString()}
+            </strong>
+
+            <p>
+              Available for analysis
+            </p>
+          </Link>
+
+          <Link
+            href="/companies"
+            className="stat-card"
+          >
+            <span>
+              Companies
+            </span>
+
+            <strong>
+              {companies.length}
+            </strong>
+
+            <p>
+              In the current dataset
+            </p>
+          </Link>
         </div>
       </section>
+
+      {/* TOP COMPANIES */}
 
       <section className="section-block">
         <div className="section-heading">
           <div>
-            <span className="eyebrow">MARKET LANDSCAPE</span>
-            <h2>Companies in the dataset</h2>
+            <span className="eyebrow">
+              MARKET LANDSCAPE
+            </span>
+
+            <h2>
+              Compensation by company
+            </h2>
           </div>
 
-          <Link href="/companies" className="text-link">
+          <Link
+            href="/companies"
+            className="text-link"
+          >
             View all companies →
           </Link>
         </div>
 
         <div className="company-grid">
-          {companies?.slice(0, 8).map((company: any) => (
-            <Link
-              key={company.id}
-              href={`/companies/${company.id}`}
-              className="company-card"
-            >
-              <div className="company-logo">
-                {company.name?.charAt(0)}
-              </div>
+          {dashboard.medianByCompany
+            .slice(0, 8)
+            .map((company) => (
+              <Link
+                key={company.name}
+                href="/companies"
+                className="company-card"
+              >
+                <div className="company-logo">
+                  {company.name.charAt(0)}
+                </div>
 
-              <div>
-                <h3>{company.name}</h3>
+                <div>
+                  <h3>
+                    {company.name}
+                  </h3>
 
-                <p>
-                  {company.industry || "Technology & Services"}
-                </p>
-              </div>
+                  <p>
+                    {company.sampleSize} approved records
+                  </p>
+                </div>
 
-              <span className="company-arrow">→</span>
-            </Link>
-          ))}
+                <span className="company-arrow">
+                  →
+                </span>
+              </Link>
+            ))}
         </div>
       </section>
 
+      {/* MAIN TOOLS */}
+
       <section className="dashboard-feature-grid">
-        <Link href="/search" className="feature-card">
-          <div className="feature-icon">⌕</div>
+        <Link
+          href="/search"
+          className="feature-card"
+        >
+          <div className="feature-icon">
+            $
+          </div>
 
-          <span className="eyebrow">SALARY SEARCH</span>
+          <span className="eyebrow">
+            SALARY SEARCH
+          </span>
 
-          <h2>Find the right salary range</h2>
+          <h2>
+            Find salary benchmarks
+          </h2>
 
           <p>
-            Search compensation by company, role, experience level and
-            location.
+            Search compensation records using
+            company, role, location and experience
+            criteria.
           </p>
 
-          <span className="feature-link">Search salaries →</span>
+          <span className="feature-link">
+            Search salaries →
+          </span>
         </Link>
 
-        <Link href="/compare" className="feature-card">
-          <div className="feature-icon">⇄</div>
+        <Link
+          href="/compare"
+          className="feature-card"
+        >
+          <div className="feature-icon">
+            ⇄
+          </div>
 
-          <span className="eyebrow">COMPANY COMPARISON</span>
+          <span className="eyebrow">
+            COMPARISON
+          </span>
 
-          <h2>Compare companies</h2>
+          <h2>
+            Compare companies
+          </h2>
 
           <p>
-            Put companies side-by-side and understand how compensation
-            differs across the market.
+            Compare companies using the same
+            normalized career level and compensation
+            criteria.
           </p>
 
-          <span className="feature-link">Start comparing →</span>
+          <span className="feature-link">
+            Start comparison →
+          </span>
         </Link>
 
-        <Link href="/analytics" className="feature-card">
-          <div className="feature-icon">◫</div>
+        <Link
+          href="/analytics"
+          className="feature-card"
+        >
+          <div className="feature-icon">
+            ◫
+          </div>
 
-          <span className="eyebrow">ANALYTICS</span>
+          <span className="eyebrow">
+            ANALYTICS
+          </span>
 
-          <h2>Explore market trends</h2>
+          <h2>
+            Explore compensation trends
+          </h2>
 
           <p>
-            Analyze compensation patterns across roles, levels and
-            organizations.
+            Analyze compensation patterns across
+            companies and the broader dataset.
           </p>
 
-          <span className="feature-link">Open analytics →</span>
+          <span className="feature-link">
+            Open analytics →
+          </span>
         </Link>
       </section>
+
+      {/* CTA */}
 
       <section className="dashboard-cta">
         <div>
-          <span className="eyebrow">MAKE BETTER DECISIONS</span>
+          <span className="eyebrow">
+            MAKE BETTER DECISIONS
+          </span>
 
-          <h2>Know what your skills are worth.</h2>
+          <h2>
+            Know what the market says.
+          </h2>
 
           <p>
-            Use CompIQ to understand the market before negotiating your next
-            opportunity.
+            Search salaries or compare companies
+            before making your next career decision.
           </p>
         </div>
 
-        <Link href="/search" className="btn btn-primary">
+        <Link
+          href="/search"
+          className="btn btn-secondary"
+        >
           Explore the market
         </Link>
       </section>
